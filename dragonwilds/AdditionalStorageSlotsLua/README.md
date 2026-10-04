@@ -24,6 +24,12 @@ aumenta: um valor menor que o de fabrica e ignorado, porque encolher jogaria ite
 - Valores de fabrica: estoque de madeira 48, inventario do jogador 20.
 - Com o mod, os modelos (os `*_GEN_VARIABLE` das classes Blueprint) e o padrao do inventario
   pessoal passam a 100; o servidor segue de pe, com o heartbeat do EOS.
+- Com o SAVE REAL do servidor (dezenas de baus) o servidor segue de pe. Uma versao anterior
+  crescia o array dos baus ja existentes pelo Lua e derrubava o servidor (SIGFPE dentro do
+  TArray do UE4SS): hoje bau ja montado nao e tocado.
+- **No fork Linux os baus que ja existiam no save ficam com a capacidade antiga** (o UE4SS so
+  termina de iniciar com o mundo carregado); os construidos depois e o inventario de quem entra
+  nascem com o valor novo. No Windows o UE4SS sobe antes do mundo e vale para tudo.
 - Ainda NAO testado com jogador: construir um bau, ver os 100 espacos e guardar alem do 48.
 - Tirar o mod nao apaga item: o jogo guarda no save o que ficou fora do limite
   (`TryRestoreSavedOutOfBoundsItems`) e devolve quando a capacidade volta.

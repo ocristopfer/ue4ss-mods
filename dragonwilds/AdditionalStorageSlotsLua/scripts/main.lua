@@ -19,11 +19,20 @@ O que foi medido no servidor (UE 5.6.1):
 - O jogo guarda no save os itens que ficaram fora do limite e os devolve quando a capacidade
   volta a crescer (TryRestoreSavedOutOfBoundsItems): tirar o mod nao apaga item.
 
-Tres momentos, porque o UE4SS pode subir ANTES do mundo (Windows) ou DEPOIS dele (o fork
-Linux so termina de iniciar com o save ja carregado):
-1. ao iniciar, uma varredura acerta os modelos e os componentes que ja existem;
-2. NotifyOnNewObject pega cada componente novo (classe carregada depois, bau construido);
-3. so CRESCE, nunca encolhe: encolher o array jogaria item fora.
+Como age:
+1. ao iniciar, uma varredura acerta os MODELOS (os *_GEN_VARIABLE e o padrao da classe);
+2. NotifyOnNewObject pega cada classe carregada depois, e componente recem-criado que ainda
+   esta com o ItemSlots vazio;
+3. so CRESCE, nunca encolhe.
+
+O que ele NAO faz, de proposito: mexer num componente que ja tem o ItemSlots montado (um bau
+do save que ja estava no mundo). Crescer o array pelo Lua derrubou o servidor de verdade
+(SIGFPE dentro do TArray do UE4SS, reproduzido com o save real), pularia a replicacao para os
+jogadores e o TryRestoreSavedOutOfBoundsItems; e trocar so o numero deixaria MaxSlotCount 100
+com um array de 48, que o jogo indexaria alem do fim. Consequencia: no Windows (UE4SS sobe
+antes do mundo) vale para tudo; no fork Linux, que so termina de iniciar com o save ja
+carregado, os baus que JA existiam ficam com a capacidade antiga ate o UE4SS iniciar antes do
+mundo - os construidos depois, e o inventario de quem entra, ja nascem com o valor novo.
 ]]
 
 local MOD = "AdditionalStorageSlotsLua"
@@ -103,22 +112,20 @@ local function is_template(component)
   return name:find("_GEN_VARIABLE", 1, true) ~= nil or name:find("^Default__") ~= nil
 end
 
+-- Componente vivo que o jogo ja montou (array de espacos com tamanho) nao e tocado: ver o topo.
+local function already_built(component)
+  if is_template(component) then return false end
+  local ok, num = pcall(function() return component:GetPropertyValue("ItemSlots"):GetArrayNum() end)
+  return not ok or num > 0
+end
+
 local function patch(component)
   if not component or not component:IsValid() then return false end
   local target = target_for(component)
-  if not target then return false end
+  if not target or already_built(component) then return false end
   local ok, current = pcall(function() return component:GetPropertyValue("MaxSlotCount") end)
   if not ok or type(current) ~= "number" or current >= target then return false end
   component:SetPropertyValue("MaxSlotCount", target)
-  -- Componente VIVO ja tem o ItemSlots do tamanho antigo: cresce com espacos vazios, como o
-  -- SetMaxSlotCount do jogo faz (ler um indice alem do fim faz o UE4SS acrescentar zeros). O
-  -- modelo nao tem itens (array vazio): mexer nele faria cada bau novo nascer com lixo.
-  if not is_template(component) then
-    local slots = component:GetPropertyValue("ItemSlots")
-    if slots and slots:GetArrayNum() > 0 and slots:GetArrayNum() < target then
-      local _ = slots[target]
-    end
-  end
   return true
 end
 
@@ -133,7 +140,7 @@ local function scan()
     local ok, is_inventory = pcall(function() return obj:IsA(inventory) end)
     if ok and is_inventory and patch(obj) then patched = patched + 1 end
   end)
-  log(("varredura: %d componente(s) ajustado(s)"):format(patched))
+  log(("varredura: %d modelo(s)/componente(s) ajustado(s)"):format(patched))
 end
 
 if CONFIGURED == 0 then
