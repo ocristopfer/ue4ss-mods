@@ -1,4 +1,4 @@
-"""Gera dist/<jogo>-<Mod>.zip de cada mod: a pasta do mod pronta para cair em Mods/.
+"""Gera dist/<jogo>-<Mod>-<versao>.zip de cada mod: a pasta do mod pronta para cair em Mods/.
 
 So stdlib. Pastas que comecam com ponto (os verificadores de `.testbed`) ficam de fora, e o
 zip e determinista (ordem e data fixas): dois empacotamentos do mesmo commit dao o mesmo
@@ -6,6 +6,7 @@ arquivo.
 """
 from __future__ import annotations
 
+import re
 import sys
 import zipfile
 from pathlib import Path
@@ -13,6 +14,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 DIST = ROOT / "dist"
 FIXED_DATE = (2000, 1, 1, 0, 0, 0)
+# A versao mora no main.lua (`local VERSION = "x.y.z"`): um lugar so, que o proprio mod mostra.
+VERSION_RE = re.compile(r'^local VERSION = "(\d+\.\d+\.\d+)"', re.MULTILINE)
+
+
+def version_of(mod: Path) -> str:
+    found = VERSION_RE.search((mod / "scripts" / "main.lua").read_text(encoding="utf-8"))
+    if not found:
+        raise SystemExit(f"{mod.name}: sem `local VERSION = \"x.y.z\"` no scripts/main.lua")
+    return found.group(1)
 
 
 def mods() -> list[Path]:
@@ -23,7 +33,7 @@ def mods() -> list[Path]:
 
 def package(mod: Path) -> Path:
     DIST.mkdir(exist_ok=True)
-    target = DIST / f"{mod.parent.name}-{mod.name}.zip"
+    target = DIST / f"{mod.parent.name}-{mod.name}-{version_of(mod)}.zip"
     with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as zf:
         for path in sorted(mod.rglob("*")):
             if path.is_file() and not any(part.startswith(".") for part in path.relative_to(mod).parts):

@@ -36,6 +36,9 @@ mundo - os construidos depois, e o inventario de quem entra, ja nascem com o val
 ]]
 
 local MOD = "AdditionalStorageSlotsLua"
+-- Versao do mod (semver), num lugar so: o log a mostra, o tools/package.py a le para o nome do
+-- zip, e o CHANGELOG.md diz o que mudou em cada uma. Mudou o comportamento, sobe a versao.
+local VERSION = "1.2.0"
 local INVENTORY_CLASS = "/Script/Dominion.InventoryComponent"
 -- Limites do valor da config: zero ou negativo nao faz sentido, e um array gigante pesa na
 -- rede (todo o ItemSlots vai para cada jogador que abre o bau).
@@ -147,7 +150,7 @@ if CONFIGURED == 0 then
   log("nenhuma classe configurada")
   return
 end
-log(("%d classe(s) configurada(s)"):format(CONFIGURED))
+log(("v%s - %d classe(s) configurada(s)"):format(VERSION, CONFIGURED))
 
 ExecuteInGameThread(scan)
 

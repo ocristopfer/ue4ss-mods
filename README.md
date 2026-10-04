@@ -21,8 +21,9 @@ escreve-se o mesmo efeito em Lua, com codigo proprio.
   scripts/main.lua        o mod
   Config/                 o que o dono do servidor ajusta
   enabled.txt             liga o mod sem mexer no mods.txt
+  CHANGELOG.md            o que mudou em cada versao
 <jogo>/.testbed/          verificadores usados nos testes (nao vao no pacote)
-tools/package.py          gera dist/<jogo>-<Mod>.zip de cada mod
+tools/package.py          gera dist/<jogo>-<Mod>-<versao>.zip de cada mod
 ```
 
 ## Regras
@@ -37,6 +38,9 @@ tools/package.py          gera dist/<jogo>-<Mod>.zip de cada mod
   "quando o objeto nasce" perde tudo o que ja existia: varra o que existe E escute o que nasce.
 - **Mexa nos objetos do jogo no game thread** (`ExecuteInGameThread`): `ExecuteWithDelay` e o
   `NotifyOnNewObject` de um carregamento em segundo plano rodam fora dele.
+- **Versao no `scripts/main.lua`** (`local VERSION = "x.y.z"`, semver), mostrada no log ao
+  iniciar. Mudou o comportamento: sobe a versao, escreve no `CHANGELOG.md` do mod e marca o
+  commit com a tag `<jogo>/<Mod>/v<versao>`. Servidor e jogadores na MESMA versao.
 - Comentarios em portugues, explicando POR QUE (o que foi medido no jogo); identificadores e
   nomes de arquivo em ingles.
 
@@ -55,5 +59,5 @@ O fork tem um testbed que sobe o servidor de verdade em Docker (`testbed/` do
 ocristopfer/ue4ss-linux). O verificador de cada jogo fica em `<jogo>/.testbed/`.
 
 ```bash
-python tools/package.py          # dist/dragonwilds-AdditionalStorageSlotsLua.zip
+python tools/package.py          # dist/dragonwilds-AdditionalStorageSlotsLua-1.2.0.zip
 ```
