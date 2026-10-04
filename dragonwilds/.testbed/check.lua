@@ -9,7 +9,9 @@ ExecuteWithDelay(40000, function()
         local full = o:GetFullName()
         if full:find("BaseBuilding", 1, true) or full:find("PersonalInventory", 1, true) then
           local slots = o:GetPropertyValue("ItemSlots")
-          say(tostring(o:GetPropertyValue("MaxSlotCount")) .. " slots=" .. tostring(slots and slots:GetArrayNum()) .. " | " .. full)
+          local okf, filled = pcall(function() return o:GetNumFilledSlots() end)
+          say(tostring(o:GetPropertyValue("MaxSlotCount")) .. " slots=" .. tostring(slots and slots:GetArrayNum())
+              .. " filled=" .. tostring(okf and filled or "?") .. " | " .. full)
         end
       end
     end)

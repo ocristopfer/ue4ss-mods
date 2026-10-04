@@ -38,7 +38,7 @@ mundo - os construidos depois, e o inventario de quem entra, ja nascem com o val
 local MOD = "AdditionalStorageSlotsLua"
 -- Versao do mod (semver), num lugar so: o log a mostra, o tools/package.py a le para o nome do
 -- zip, e o CHANGELOG.md diz o que mudou em cada uma. Mudou o comportamento, sobe a versao.
-local VERSION = "1.2.0"
+local VERSION = "1.3.0"
 local INVENTORY_CLASS = "/Script/Dominion.InventoryComponent"
 -- Limites do valor da config: zero ou negativo nao faz sentido, e um array gigante pesa na
 -- rede (todo o ItemSlots vai para cada jogador que abre o bau).
@@ -132,6 +132,23 @@ local function patch(component)
   return true
 end
 
+-- O modelo do componente vivo: "<classe Blueprint do dono>:<nome do componente>_GEN_VARIABLE".
+-- Quando o componente nasce o modelo ja esta carregado (e dele que o jogo copia), entao e a
+-- hora certa de acerta-lo - uma vez por classe, porque a busca percorre todos os objetos.
+local templates_done = {}
+local function patch_template_of(component)
+  local ok, actor_class = pcall(function() return component:GetOuter():GetClass() end)
+  if not ok or not actor_class or not actor_class:IsValid() then return end
+  local class_path = actor_class:GetFullName():gsub("^%S+%s+", "")
+  local path = class_path .. ":" .. (name_of(component) or "") .. "_GEN_VARIABLE"
+  if templates_done[path] then return end
+  templates_done[path] = true
+  local template = StaticFindObject(path)
+  if template and template:IsValid() and patch(template) then
+    log(("%s -> %d espacos (modelo)"):format(path, target_for(template)))
+  end
+end
+
 local function scan()
   local inventory = StaticFindObject(INVENTORY_CLASS)
   if not inventory or not inventory:IsValid() then
@@ -155,6 +172,17 @@ log(("v%s - %d classe(s) configurada(s)"):format(VERSION, CONFIGURED))
 ExecuteInGameThread(scan)
 
 NotifyOnNewObject(INVENTORY_CLASS, function(component)
+  -- Componente VIVO: na hora, ainda dentro da construcao - o ItemSlots esta vazio e o jogo so o
+  -- monta depois, ja com o limite novo. Esperar perdia os baus do save: com o UE4SS iniciando
+  -- cedo, eles nascem do modelo antigo dentro da janela de espera (medido com o save real).
+  if not is_template(component) then
+    patch_template_of(component)
+    if patch(component) then
+      log(("%s -> %d espacos"):format(component:GetFullName(), target_for(component)))
+    end
+    return
+  end
+  -- Modelo: a construcao vem antes das propriedades sairem do disco; trocar agora seria desfeito.
   ExecuteWithDelay(PATCH_DELAY_MS, function()
     ExecuteInGameThread(function()
       if patch(component) then
