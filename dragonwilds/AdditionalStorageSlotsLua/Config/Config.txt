@@ -1,0 +1,17 @@
+# Mesmo formato do AdditionalStorageSlots (Mathayuss): classe = espacos (1 a 1000).
+# Use os MESMOS valores no servidor e nos jogadores.
+
+# Storage containers
+
+BP_BaseBuilding_Barrel_C             =100
+BP_BaseBuilding_Crate_C              =100
+BP_BaseBuilding_Chest_C              =100
+BP_BaseBuilding_Chest_Small_C        =100
+BP_BaseBuilding_LumberStorage_C      =100
+BP_BaseBuilding_WeaponRack_C         =100
+BP_BaseBuilding_ArmourMannequin_C    =100
+BP_BaseBuilding_CapeHook_C           =100
+BP_BaseBuilding_CapeRack_C           =100
+
+# Player inventory
+BP_Components_PersonalInventory_C    =100
