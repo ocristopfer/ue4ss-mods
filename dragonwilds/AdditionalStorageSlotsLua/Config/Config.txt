@@ -6,6 +6,7 @@
 BP_BaseBuilding_Barrel_C             =100
 BP_BaseBuilding_Crate_C              =100
 BP_BaseBuilding_Chest_C              =100
+BP_BaseBuilding_Chest_Iron_C         =100
 BP_BaseBuilding_Chest_Small_C        =100
 BP_BaseBuilding_LumberStorage_C      =100
 BP_BaseBuilding_WeaponRack_C         =100

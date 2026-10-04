@@ -12,7 +12,7 @@ escreve-se o mesmo efeito em Lua, com codigo proprio.
 
 | jogo | mod | o que faz | origem da ideia |
 |---|---|---|---|
-| RuneScape: Dragonwilds | [AdditionalStorageSlotsLua](dragonwilds/AdditionalStorageSlotsLua) | aumenta os espacos dos baus, suportes e do inventario do jogador | AdditionalStorageSlots, de Mathayuss (Nexus, mod C++ so de Windows) |
+| RuneScape: Dragonwilds | [AdditionalStorageSlotsLua](dragonwilds/AdditionalStorageSlotsLua) | aumenta os espacos dos baus (inclusive o de ferro), suportes e do inventario do jogador | AdditionalStorageSlots, de Mathayuss (Nexus, mod C++ so de Windows) |
 
 ## Estrutura
 
