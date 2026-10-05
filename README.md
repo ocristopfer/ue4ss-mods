@@ -92,3 +92,8 @@ python tools/package.py
 # dist/dragonwilds-AdditionalStorageSlotsLua-1.3.1-windows.zip
 # dist/dragonwilds-AdditionalStorageSlotsLua-1.3.1-linux.zip
 ```
+
+## License
+
+[MIT](LICENSE). The mods are original code; the original mods that inspired them belong to
+their authors and are not included here.
