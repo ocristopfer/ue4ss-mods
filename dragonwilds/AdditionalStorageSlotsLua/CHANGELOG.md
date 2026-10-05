@@ -1,25 +1,34 @@
 # Changelog - AdditionalStorageSlotsLua
 
-Versao em `scripts/main.lua` (`VERSION`), semver: correcao sobe o ultimo numero, classe ou
-recurso novo sobe o do meio, mudanca que exige mexer na config sobe o primeiro.
+Version in `scripts/main.lua` (`VERSION`), semver: a fix bumps the last number, a new class or
+feature bumps the middle one, a change that requires editing the config bumps the first.
+
+## 1.3.1
+- Log messages, comments and docs in English. No behavior change.
+- Linux: targets the `linux` branch of [ocristopfer/RE-UE4SS](https://github.com/ocristopfer/RE-UE4SS)
+  (loaded with `LD_PRELOAD`, mods in `Binaries/Linux/ue4ss/Mods/`), replacing the old
+  `ue4ss-linux` fork.
+- Drop-in zips: `-windows.zip` and `-linux.zip` mirror the game folder; extract them into the
+  folder that contains `Binaries/`.
 
 ## 1.3.0
-- Quando o primeiro componente de uma classe nasce, o MODELO dela e acertado na hora (o jogo
-  copia o modelo por cima do componente logo depois de construi-lo, entao acertar so o componente
-  nao bastava), e o componente tambem. Com o fork do UE4SS `dragonwilds-v2`, que inicia antes do
-  mundo, isso faz os baus do SAVE nascerem com a capacidade nova.
-- Medido com o save real (87 baus): 85 com a capacidade da config, e a contagem de espacos
-  ocupados de cada bau IGUAL a de uma rodada sem o mod (1382) - nenhum item perdido.
+- When the first component of a class is born, that class's TEMPLATE is fixed right away (the
+  game copies the template over the component right after constructing it, so fixing only the
+  component was not enough), and the component too. With a UE4SS that starts before the world
+  (the old `dragonwilds-v2` Linux build), this makes the chests from the SAVE be born with the
+  new capacity.
+- Measured with the real save (87 chests): 85 with the configured capacity, and the count of
+  filled slots of each chest EQUAL to a run without the mod (1382) - no item lost.
 
 ## 1.2.0
-- Bau de ferro (`BP_BaseBuilding_Chest_Iron_C`, 64 espacos de fabrica) na config.
-- Versao no log ao iniciar.
+- Iron chest (`BP_BaseBuilding_Chest_Iron_C`, 64 stock slots) in the config.
+- Version in the log on startup.
 
 ## 1.1.0
-- Nao mexe mais em bau que ja esta montado no mundo, so nos modelos e em componente recem-criado.
-  A 1.0.0 crescia o array dos baus do save pelo Lua e DERRUBAVA o servidor (SIGFPE dentro do
-  TArray do UE4SS), reproduzido com o save real. Nao use a 1.0.0.
+- No longer touches a chest already built in the world, only the templates and newly created
+  components. 1.0.0 grew the array of the save's chests from Lua and CRASHED the server (SIGFPE
+  inside UE4SS's TArray), reproduced with the real save. Do not use 1.0.0.
 
 ## 1.0.0
-- Primeira versao: troca o `MaxSlotCount` dos baus, suportes e do inventario do jogador, com a
-  mesma `Config.txt` do AdditionalStorageSlots (Mathayuss).
+- First version: changes `MaxSlotCount` of chests, racks and the player inventory, with the same
+  `Config.txt` as AdditionalStorageSlots (Mathayuss).

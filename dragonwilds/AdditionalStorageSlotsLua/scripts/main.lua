@@ -1,52 +1,53 @@
 --[[
-AdditionalStorageSlotsLua - mais espacos nos baus e no inventario do RuneScape: Dragonwilds.
+AdditionalStorageSlotsLua - more slots in chests and in the player inventory of RuneScape: Dragonwilds.
 
-Versao em Lua (roda no UE4SS de Windows E no fork Linux ocristopfer/ue4ss-linux) do mesmo
-efeito do AdditionalStorageSlots de Mathayuss (mod C++ do Nexus, so Windows). Codigo proprio,
-escrito a partir do que o jogo faz - nao do codigo do mod original. A Config/Config.txt tem o
-MESMO formato, para o servidor e os jogadores usarem os mesmos valores.
+Lua version (runs on the Windows UE4SS AND on the Linux build of the ocristopfer/RE-UE4SS fork,
+`linux` branch) of the same effect as Mathayuss' AdditionalStorageSlots (C++ mod on Nexus,
+Windows only). Original code, written from what the game does - not from the original mod's
+code. Config/Config.txt uses the SAME format, so the server and the players use the same values.
 
-O que foi medido no servidor (UE 5.6.1):
-- A capacidade e a propriedade MaxSlotCount do UInventoryComponent (classe C++ do jogo). O
-  valor de fabrica de cada bau vem do componente-MODELO da classe Blueprint (o
-  "<Componente>_GEN_VARIABLE" dentro do BP_BaseBuilding_*_C); o do inventario do jogador, do
-  modelo dentro do BP_PlayerController (classe BP_Components_PersonalInventory_C).
-- UInventoryComponent::SetMaxSlotCount (nativo, sem acesso pelo Lua) so roda com autoridade -
-  quem manda e o SERVIDOR - e, ao aumentar, cresce o array ItemSlots com espacos vazios
-  (zeros) e o marca para replicar. Os espacos extras chegam aos jogadores pela rede; o numero
-  MaxSlotCount nao. Por isso o mod precisa estar no servidor, e provavelmente tambem nos
-  jogadores (para a tela deles aceitar os espacos alem do valor de fabrica).
-- O jogo guarda no save os itens que ficaram fora do limite e os devolve quando a capacidade
-  volta a crescer (TryRestoreSavedOutOfBoundsItems): tirar o mod nao apaga item.
+What was measured on the server (UE 5.6.1):
+- The capacity is the MaxSlotCount property of UInventoryComponent (a C++ game class). Each
+  chest's stock value comes from the class's TEMPLATE component in the Blueprint class (the
+  "<Component>_GEN_VARIABLE" inside BP_BaseBuilding_*_C); the player inventory's comes from the
+  template inside BP_PlayerController (class BP_Components_PersonalInventory_C).
+- UInventoryComponent::SetMaxSlotCount (native, not reachable from Lua) only runs with authority -
+  the SERVER is in charge - and, when growing, extends the ItemSlots array with empty slots
+  (zeros) and marks it for replication. The extra slots reach the players over the network; the
+  MaxSlotCount number does not. That is why the mod must be on the server, and probably on the
+  players too (so their UI accepts slots beyond the stock value).
+- The game keeps in the save the items left beyond the limit and gives them back when the
+  capacity grows again (TryRestoreSavedOutOfBoundsItems): removing the mod does not delete items.
 
-Como age:
-1. ao iniciar, uma varredura acerta os MODELOS (os *_GEN_VARIABLE e o padrao da classe);
-2. NotifyOnNewObject pega cada classe carregada depois, e componente recem-criado que ainda
-   esta com o ItemSlots vazio;
-3. so CRESCE, nunca encolhe.
+How it works:
+1. on startup, a scan fixes the TEMPLATES (the *_GEN_VARIABLE and the class default);
+2. NotifyOnNewObject catches each class loaded later, and each newly created component whose
+   ItemSlots is still empty;
+3. it only GROWS, never shrinks.
 
-O que ele NAO faz, de proposito: mexer num componente que ja tem o ItemSlots montado (um bau
-do save que ja estava no mundo). Crescer o array pelo Lua derrubou o servidor de verdade
-(SIGFPE dentro do TArray do UE4SS, reproduzido com o save real), pularia a replicacao para os
-jogadores e o TryRestoreSavedOutOfBoundsItems; e trocar so o numero deixaria MaxSlotCount 100
-com um array de 48, que o jogo indexaria alem do fim. Consequencia: no Windows (UE4SS sobe
-antes do mundo) vale para tudo; no fork Linux, que so termina de iniciar com o save ja
-carregado, os baus que JA existiam ficam com a capacidade antiga ate o UE4SS iniciar antes do
-mundo - os construidos depois, e o inventario de quem entra, ja nascem com o valor novo.
+What it deliberately does NOT do: touch a component whose ItemSlots is already built (a chest
+from the save that was already in the world). Growing the array from Lua crashed the real server
+(SIGFPE inside UE4SS's TArray, reproduced with the real save), and would skip replication to the
+players and TryRestoreSavedOutOfBoundsItems; changing only the number would leave MaxSlotCount
+100 with an array of 48, which the game would index past the end. Consequence: when UE4SS starts
+before the world (Windows, and the Linux build loaded with LD_PRELOAD) it applies to everything;
+on a build that only finishes starting with the save already loaded, the chests that ALREADY
+existed keep the old capacity - the ones built afterwards, and the inventory of whoever joins,
+are born with the new value.
 ]]
 
 local MOD = "AdditionalStorageSlotsLua"
--- Versao do mod (semver), num lugar so: o log a mostra, o tools/package.py a le para o nome do
--- zip, e o CHANGELOG.md diz o que mudou em cada uma. Mudou o comportamento, sobe a versao.
-local VERSION = "1.3.0"
+-- Mod version (semver), in a single place: the log shows it, tools/package.py reads it for the
+-- zip name, and CHANGELOG.md says what changed in each one. Behavior changed: bump the version.
+local VERSION = "1.3.1"
 local INVENTORY_CLASS = "/Script/Dominion.InventoryComponent"
--- Limites do valor da config: zero ou negativo nao faz sentido, e um array gigante pesa na
--- rede (todo o ItemSlots vai para cada jogador que abre o bau).
+-- Bounds for the config value: zero or negative makes no sense, and a huge array weighs on the
+-- network (the whole ItemSlots goes to every player that opens the chest).
 local MIN_SLOTS, MAX_SLOTS = 1, 1000
--- Quantos niveis de "dono" (outer) se sobe para achar a classe do bau: o modelo herdado mora
--- em InheritableComponentHandler, um nivel abaixo da classe.
+-- How many levels of owner (outer) to climb to find the chest's class: the inherited template
+-- lives in InheritableComponentHandler, one level below the class.
 local MAX_OUTER_DEPTH = 4
--- O objeto recem-construido ainda nao tem as propriedades carregadas do pacote: espera um pouco.
+-- A freshly constructed object does not have its properties loaded from the package yet: wait a bit.
 local PATCH_DELAY_MS = 250
 
 local function log(msg) print(("[%s] %s\n"):format(MOD, msg)) end
@@ -60,17 +61,17 @@ local function read_config(path)
   local config, count = {}, 0
   local file = io.open(path, "r")
   if not file then
-    log("sem " .. path .. ": nada sera alterado")
+    log("no " .. path .. ": nothing will be changed")
     return config, 0
   end
   for raw in file:lines() do
-    -- BOM no comeco do arquivo (editor do Windows) grudaria no primeiro nome.
+    -- A BOM at the start of the file (Windows editor) would stick to the first name.
     local line = raw:gsub("^\239\187\191", ""):gsub("[#;].*$", "")
     local name, value = line:match("^%s*([%w_]+)%s*=%s*(%-?%d+)%s*$")
     if name then
       local slots = tonumber(value)
       if slots < MIN_SLOTS or slots > MAX_SLOTS then
-        log(("%s = %d fora de %d-%d: ignorado"):format(name, slots, MIN_SLOTS, MAX_SLOTS))
+        log(("%s = %d outside %d-%d: ignored"):format(name, slots, MIN_SLOTS, MAX_SLOTS))
       else
         config[name] = slots
         count = count + 1
@@ -93,9 +94,9 @@ local function class_name_of(obj)
   return ok and name or nil
 end
 
--- O valor configurado para este componente, ou nil. Casa pela classe do proprio componente (o
--- inventario do jogador) ou pela classe do dono: o modelo mora DENTRO da classe Blueprint (o
--- outer e o BP_BaseBuilding_*_C), e o componente vivo dentro do ator dessa classe.
+-- The configured value for this component, or nil. Matches by the component's own class (the
+-- player inventory) or by the owner's class: the template lives INSIDE the Blueprint class (its
+-- outer is BP_BaseBuilding_*_C), and the live component inside an actor of that class.
 local function target_for(component)
   local value = CONFIG[class_name_of(component) or ""]
   if value then return value end
@@ -115,7 +116,7 @@ local function is_template(component)
   return name:find("_GEN_VARIABLE", 1, true) ~= nil or name:find("^Default__") ~= nil
 end
 
--- Componente vivo que o jogo ja montou (array de espacos com tamanho) nao e tocado: ver o topo.
+-- A live component the game already built (slot array with a size) is not touched: see the top.
 local function already_built(component)
   if is_template(component) then return false end
   local ok, num = pcall(function() return component:GetPropertyValue("ItemSlots"):GetArrayNum() end)
@@ -132,9 +133,9 @@ local function patch(component)
   return true
 end
 
--- O modelo do componente vivo: "<classe Blueprint do dono>:<nome do componente>_GEN_VARIABLE".
--- Quando o componente nasce o modelo ja esta carregado (e dele que o jogo copia), entao e a
--- hora certa de acerta-lo - uma vez por classe, porque a busca percorre todos os objetos.
+-- The live component's template: "<owner's Blueprint class>:<component name>_GEN_VARIABLE".
+-- When the component is born the template is already loaded (the game copies from it), so it is
+-- the right time to fix it - once per class, because the lookup walks every object.
 local templates_done = {}
 local function patch_template_of(component)
   local ok, actor_class = pcall(function() return component:GetOuter():GetClass() end)
@@ -145,14 +146,14 @@ local function patch_template_of(component)
   templates_done[path] = true
   local template = StaticFindObject(path)
   if template and template:IsValid() and patch(template) then
-    log(("%s -> %d espacos (modelo)"):format(path, target_for(template)))
+    log(("%s -> %d slots (template)"):format(path, target_for(template)))
   end
 end
 
 local function scan()
   local inventory = StaticFindObject(INVENTORY_CLASS)
   if not inventory or not inventory:IsValid() then
-    log("classe " .. INVENTORY_CLASS .. " nao encontrada: o jogo mudou?")
+    log("class " .. INVENTORY_CLASS .. " not found: did the game change?")
     return
   end
   local patched = 0
@@ -160,33 +161,35 @@ local function scan()
     local ok, is_inventory = pcall(function() return obj:IsA(inventory) end)
     if ok and is_inventory and patch(obj) then patched = patched + 1 end
   end)
-  log(("varredura: %d modelo(s)/componente(s) ajustado(s)"):format(patched))
+  log(("scan: %d template(s)/component(s) adjusted"):format(patched))
 end
 
 if CONFIGURED == 0 then
-  log("nenhuma classe configurada")
+  log("no class configured")
   return
 end
-log(("v%s - %d classe(s) configurada(s)"):format(VERSION, CONFIGURED))
+log(("v%s - %d class(es) configured"):format(VERSION, CONFIGURED))
 
 ExecuteInGameThread(scan)
 
 NotifyOnNewObject(INVENTORY_CLASS, function(component)
-  -- Componente VIVO: na hora, ainda dentro da construcao - o ItemSlots esta vazio e o jogo so o
-  -- monta depois, ja com o limite novo. Esperar perdia os baus do save: com o UE4SS iniciando
-  -- cedo, eles nascem do modelo antigo dentro da janela de espera (medido com o save real).
+  -- LIVE component: right away, still inside construction - ItemSlots is empty and the game only
+  -- builds it afterwards, already with the new limit. Waiting missed the chests from the save:
+  -- with UE4SS starting early, they are born from the old template inside the wait window
+  -- (measured with the real save).
   if not is_template(component) then
     patch_template_of(component)
     if patch(component) then
-      log(("%s -> %d espacos"):format(component:GetFullName(), target_for(component)))
+      log(("%s -> %d slots"):format(component:GetFullName(), target_for(component)))
     end
     return
   end
-  -- Modelo: a construcao vem antes das propriedades sairem do disco; trocar agora seria desfeito.
+  -- Template: construction comes before the properties are read from disk; changing it now
+  -- would be undone.
   ExecuteWithDelay(PATCH_DELAY_MS, function()
     ExecuteInGameThread(function()
       if patch(component) then
-        log(("%s -> %d espacos"):format(component:GetFullName(), target_for(component)))
+        log(("%s -> %d slots"):format(component:GetFullName(), target_for(component)))
       end
     end)
   end)

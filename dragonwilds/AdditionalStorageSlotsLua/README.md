@@ -1,36 +1,40 @@
 # AdditionalStorageSlotsLua (RuneScape: Dragonwilds)
 
-Aumenta os espacos dos baus, caixotes, barris, estoque de madeira, suportes e do inventario
-do jogador. Versao em Lua - Windows e Linux - do efeito do
-[AdditionalStorageSlots](https://www.nexusmods.com/runescapedragonwilds/mods/37), de
-**Mathayuss** (mod C++ so de Windows). Codigo proprio; a ideia e a config sao dele.
+Increases the slots of chests, crates, barrels, lumber storage, racks and the player inventory.
+Lua version - Windows and Linux - of the effect of
+[AdditionalStorageSlots](https://www.nexusmods.com/runescapedragonwilds/mods/37), by
+**Mathayuss** (Windows-only C++ mod). Original code; the idea and the config are Mathayuss'.
 
-## Onde instalar
+## Where to install
 
-- **Servidor: obrigatorio.** Quem manda no inventario e o servidor
-  (`UInventoryComponent::SetMaxSlotCount` so roda com autoridade). Sem o mod nele, os espacos
-  extras nao existem.
-- **Jogadores: provavelmente tambem.** O servidor manda os espacos extras pela rede (o array
-  `ItemSlots`), mas nao o numero `MaxSlotCount`: a tela do jogador pode continuar no valor de
-  fabrica. Use este mod ou o original, **com os mesmos valores**.
+- **Server: required.** The server owns the inventory
+  (`UInventoryComponent::SetMaxSlotCount` only runs with authority). Without the mod there, the
+  extra slots do not exist.
+- **Players: probably too.** The server sends the extra slots over the network (the `ItemSlots`
+  array), but not the `MaxSlotCount` number: the player's UI may stay at the stock value. Use this
+  mod or the original, **with the same values**.
+
+Drop-in zips (`-windows`/`-linux`) and the UE4SS each platform needs: see the
+[repository README](../../README.md#installing).
 
 ## Config
 
-`Config/Config.txt`, uma classe por linha: `BP_BaseBuilding_Chest_C = 100` (1 a 1000). So
-aumenta: um valor menor que o de fabrica e ignorado, porque encolher jogaria item fora.
+`Config/Config.txt`, one class per line: `BP_BaseBuilding_Chest_C = 100` (1 to 1000). It only
+grows: a value below the stock one is ignored, because shrinking would throw items away.
 
-## Medido no servidor dedicado (UE 5.6.1, fork Linux do UE4SS)
+## Measured on the dedicated server (UE 5.6.1, Linux UE4SS)
 
-- Valores de fabrica: estoque de madeira 48, inventario do jogador 20.
-- Com o mod, os modelos (os `*_GEN_VARIABLE` das classes Blueprint) e o padrao do inventario
-  pessoal passam a 100; o servidor segue de pe, com o heartbeat do EOS.
-- Com o SAVE REAL do servidor (dezenas de baus) o servidor segue de pe. Uma versao anterior
-  crescia o array dos baus ja existentes pelo Lua e derrubava o servidor (SIGFPE dentro do
-  TArray do UE4SS): hoje bau ja montado nao e tocado.
-- **Com o fork `dragonwilds-v2` (ou mais novo) vale tambem para os baus que ja existem no save**:
-  o UE4SS inicia antes do mundo. Medido com o save real (87 baus): 85 com a capacidade da config
-  e a mesma contagem de espacos ocupados de uma rodada sem o mod. Com o `dragonwilds-v1` (que
-  inicia 30 s depois) so os baus construidos depois e o inventario de quem entra mudam.
-- Ainda NAO testado com jogador: construir um bau, ver os 100 espacos e guardar alem do 48.
-- Tirar o mod nao apaga item: o jogo guarda no save o que ficou fora do limite
-  (`TryRestoreSavedOutOfBoundsItems`) e devolve quando a capacidade volta.
+- Stock values: lumber storage 48, player inventory 20.
+- With the mod, the templates (the `*_GEN_VARIABLE` of the Blueprint classes) and the personal
+  inventory default go to 100; the server stays up, with the EOS heartbeat.
+- With the server's REAL save (dozens of chests) the server stays up. An earlier version grew
+  the array of existing chests from Lua and crashed the server (SIGFPE inside UE4SS's TArray):
+  today an already built chest is not touched.
+- **When UE4SS starts before the world it also applies to the chests already in the save.**
+  Measured with the real save (87 chests): 85 with the configured capacity and the same count of
+  filled slots as a run without the mod. With a UE4SS that starts after the world (an earlier
+  Linux build started 30 s late) only chests built afterwards and the inventory of whoever joins
+  change.
+- NOT tested with a player yet: build a chest, see the 100 slots and store beyond slot 48.
+- Removing the mod does not delete items: the game keeps in the save whatever was beyond the
+  limit (`TryRestoreSavedOutOfBoundsItems`) and gives it back when the capacity returns.
