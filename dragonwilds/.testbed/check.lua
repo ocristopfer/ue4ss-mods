@@ -1,4 +1,4 @@
--- Verificador do teste: le o MaxSlotCount de todo InventoryComponent dos baus e do jogador.
+-- Test checker: reads MaxSlotCount of every InventoryComponent of the chests and of the player.
 local function say(m) print("[storage-check] " .. m .. "\n") end
 ExecuteWithDelay(40000, function()
   ExecuteInGameThread(function()
